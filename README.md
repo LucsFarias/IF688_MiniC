@@ -259,6 +259,7 @@ directly to the topic you need.
 | 6 | [The interpreter](docs/06-interpreter.md) | How a type-checked program is executed |
 | 7 | [The standard library](docs/07-stdlib.md) | Built-in functions and how to add new ones |
 | 8 | [Testing](docs/08-testing.md) | How the test suite is organised and how to add tests |
+| 10 | [Guia de arquitetura e evolução](docs/10-guia-arquitetura-evolucao.md) | Leitura do compilador e proposta para ADTs e pattern matching |
 
 ---
 
