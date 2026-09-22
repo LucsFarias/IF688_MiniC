@@ -117,7 +117,10 @@ pub fn type_check(program: &UncheckedProgram) -> Result<CheckedProgram, TypeErro
         let checked = type_check_fun_decl(f, &mut env, &fn_snapshot)?;
         functions.push(checked);
     }
-    Ok(Program { functions })
+    Ok(Program {
+        types: program.types.clone(),
+        functions,
+    })
 }
 
 fn type_check_fun_decl(
@@ -416,6 +419,8 @@ fn type_check_expr_inner(
             base: Box::new(type_check_expr_to_typed(base, env)?),
             index: Box::new(type_check_expr_to_typed(index, env)?),
         }),
+        Expr::Construct { .. } => Err(TypeError::new("adt/match not yet supported")),
+        Expr::Match { .. } => Err(TypeError::new("adt/match not yet supported")),
     }
 }
 
@@ -543,6 +548,8 @@ fn type_check_expr(
                 Err(TypeError::new("indexed expression must be array"))
             }
         }
+        Expr::Construct { .. } => Err(TypeError::new("adt/match not yet supported")),
+        Expr::Match { .. } => Err(TypeError::new("adt/match not yet supported")),
     }
 }
 

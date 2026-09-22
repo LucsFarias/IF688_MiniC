@@ -60,6 +60,22 @@ pub enum Type {
     Fun(Vec<Type>, Box<Type>),
     /// Matches any type. Only used as a parameter type in native stdlib registrations.
     Any,
+    /// Name of a user-defined ADT (see `AdtDecl`).
+    Named(String),
+}
+
+/// A user-defined algebraic data type: `type Name = Variant | Variant(...) | ...;`
+#[derive(Debug, Clone, PartialEq)]
+pub struct AdtDecl {
+    pub name: String,
+    pub variants: Vec<VariantDecl>,
+}
+
+/// One variant of an ADT, with positional (unnamed) payload fields.
+#[derive(Debug, Clone, PartialEq)]
+pub struct VariantDecl {
+    pub name: String,
+    pub fields: Vec<Type>,
 }
 
 /// A literal value.
@@ -78,6 +94,25 @@ pub type Name = String;
 pub struct ExprD<Ty> {
     pub exp: Expr<Ty>,
     pub ty: Ty,
+}
+
+/// A pattern used in a `match` arm. Not generic in `Ty`, and not an `Expr`:
+/// a pattern describes a shape to test against a value, it does not compute one.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Pattern {
+    /// `_`
+    Wildcard,
+    /// A plain identifier: binds the whole matched value to this name.
+    Bind(String),
+    /// `Name(pat, pat, ...)` or `Name` (fields empty).
+    Variant { name: String, fields: Vec<Pattern> },
+}
+
+/// One arm of a `match` expression: `pattern => body;`
+#[derive(Debug, Clone, PartialEq)]
+pub struct MatchArm<Ty> {
+    pub pattern: Pattern,
+    pub body: Box<ExprD<Ty>>,
 }
 
 /// An expression: literals, identifiers, and composed operations.
@@ -111,6 +146,16 @@ pub enum Expr<Ty> {
     Index {
         base: Box<ExprD<Ty>>,
         index: Box<ExprD<Ty>>,
+    },
+    /// Construct a value of an ADT variant: `Name(args...)` or `Name` for a payload-less variant.
+    Construct {
+        name: String,
+        args: Vec<ExprD<Ty>>,
+    },
+    /// `match (scrutinee) { pattern => body; ... }`
+    Match {
+        scrutinee: Box<ExprD<Ty>>,
+        arms: Vec<MatchArm<Ty>>,
     },
 }
 
@@ -170,6 +215,7 @@ pub struct FunDecl<Ty> {
 /// A complete MiniC program: function declarations only. Execution starts at `main`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program<Ty> {
+    pub types: Vec<AdtDecl>,
     pub functions: Vec<FunDecl<Ty>>,
 }
 

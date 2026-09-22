@@ -1,4 +1,4 @@
-# 3 — The Abstract Syntax Tree (AST)
+=# 3 — The Abstract Syntax Tree (AST)
 
 This document explains what an AST is, how MiniC represents programs in
 memory, and the clever trick that lets the same data structure serve both
