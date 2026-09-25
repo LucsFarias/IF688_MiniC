@@ -1,0 +1,5 @@
+type Color = Red | Green | Blue;
+type Shape = Circle(int) | Rectangle(int, int);
+
+void main() {
+}

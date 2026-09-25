@@ -81,6 +81,32 @@ fn test_parse_full_program() {
 }
 
 #[test]
+fn test_parse_program_with_adt_types() {
+    let prog = parse_program_file("adt_types.minic").expect("program with ADTs should parse");
+    assert_eq!(prog.types.len(), 2);
+    assert_eq!(prog.types[0].name, "Color");
+    assert_eq!(
+        prog.types[0]
+            .variants
+            .iter()
+            .map(|v| v.name.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Red", "Green", "Blue"]
+    );
+    assert!(prog.types[0].variants.iter().all(|v| v.fields.is_empty()));
+    assert_eq!(prog.types[1].name, "Shape");
+    assert_eq!(prog.types[1].variants[0].name, "Circle");
+    assert_eq!(prog.types[1].variants[0].fields, vec![Type::Int]);
+    assert_eq!(prog.types[1].variants[1].name, "Rectangle");
+    assert_eq!(
+        prog.types[1].variants[1].fields,
+        vec![Type::Int, Type::Int]
+    );
+    assert_eq!(prog.functions.len(), 1);
+    assert_eq!(prog.functions[0].name, "main");
+}
+
+#[test]
 fn test_parse_invalid_syntax_fails() {
     let result = parse_program_file("invalid_syntax.minic");
     assert!(result.is_err(), "invalid syntax should fail to parse");

@@ -13,6 +13,7 @@
 //! * [`expression`] — parse a single expression (useful for tests).
 //! * [`statement`] / [`assignment`] — parse a single statement.
 //! * [`fun_decl`] — parse a single function declaration.
+//! * [`adt_decl`] — parse a single algebraic data type declaration.
 //! * [`identifier`] — parse an identifier.
 //! * [`literal`] — parse a literal value.
 //!
@@ -38,11 +39,11 @@
 //!
 //! ## Sub-module decomposition by syntactic category
 //!
-//! The parser is split into six files, each responsible for one grammatical
-//! category: `literals`, `identifiers`, `expressions`, `statements`,
-//! `functions`, and `program`. This mirrors how language grammars are
-//! traditionally presented and makes it easy to find the rule for any
-//! construct. Lower-level modules (e.g., `literals`) are imported by
+//! The parser is split by grammatical category: `literals`, `identifiers`,
+//! `expressions`, `statements`, `functions`, `types`, and `program`. This
+//! mirrors how language grammars are traditionally presented and makes it
+//! easy to find the rule for any construct. Lower-level modules (e.g.,
+//! `literals`) are imported by
 //! higher-level ones (e.g., `expressions`), so the dependency direction
 //! follows the grammar hierarchy.
 //!
@@ -60,6 +61,7 @@ pub mod identifiers;
 pub mod literals;
 pub mod program;
 pub mod statements;
+pub mod types;
 
 pub use expressions::expression;
 pub use functions::fun_decl;
@@ -67,3 +69,4 @@ pub use identifiers::identifier;
 pub use literals::{literal, Literal};
 pub use program::program;
 pub use statements::{assignment, statement};
+pub use types::adt_decl;

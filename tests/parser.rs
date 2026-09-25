@@ -107,6 +107,9 @@ fn test_identifier_reject_reserved() {
     assert!(identifier("false").is_err());
     assert!(identifier("int").is_err());
     assert!(identifier("void").is_err());
+    assert!(identifier("return").is_err());
+    assert!(identifier("type").is_err());
+    assert!(identifier("match").is_err());
 }
 
 #[test]

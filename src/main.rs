@@ -1,6 +1,7 @@
 use std::{env, fs, process};
 
 use mini_c::{interpreter::interpret, parser::program, semantic::type_check};
+use nom::combinator::all_consuming;
 
 fn usage() -> ! {
     eprintln!("Usage: minic --check <file.minic>");
@@ -29,7 +30,7 @@ fn main() {
     };
 
     // Task 2.1 / 3.1: parse
-    let unchecked = match program(&source) {
+    let unchecked = match all_consuming(program)(&source) {
         Ok((_, prog)) => prog,
         Err(e) => {
             eprintln!("Parse error: {:?}", e);
