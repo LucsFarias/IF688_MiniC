@@ -256,3 +256,56 @@ fn test_stdlib_pow_float_args() {
     "#;
     assert!(run(src).is_ok(), "{}", run(src).unwrap_err());
 }
+
+#[test]
+fn test_match_statement_selects_variant_and_propagates_return() {
+    let src = r#"
+        type OptionInt = Some(int) | None;
+        int extract(OptionInt value) {
+            match (value) {
+                Some(number) => { return number; }
+                None => { return 0; }
+            }
+        }
+        void main() {
+            int[] guard = [1];
+            if extract(Some(42)) != 42 {
+                int failure = guard[2];
+            }
+            if extract(None) != 0 {
+                int failure = guard[2];
+            }
+        }
+    "#;
+    assert!(run(src).is_ok(), "{}", run(src).unwrap_err());
+}
+
+#[test]
+fn test_match_statement_matches_nested_patterns() {
+    let src = r#"
+        type Inner = Left(int) | Right;
+        type Outer = Wrapped(Inner) | Empty;
+        int extract(Outer value) {
+            int result = 0;
+            match (value) {
+                Wrapped(Left(number)) => { result = number; }
+                Wrapped(Right) => { result = -1; }
+                Empty => { result = -2; }
+            }
+            return result;
+        }
+        void main() {
+            int[] guard = [1];
+            if extract(Wrapped(Left(23))) != 23 {
+                int failure = guard[2];
+            }
+            if extract(Wrapped(Right)) != -1 {
+                int failure = guard[2];
+            }
+            if extract(Empty) != -2 {
+                int failure = guard[2];
+            }
+        }
+    "#;
+    assert!(run(src).is_ok(), "{}", run(src).unwrap_err());
+}

@@ -5,7 +5,7 @@
 //! Exposes two public functions:
 //!
 //! * [`statement`] — the top-level entry point; tries each statement form in
-//!   order: `return`, `if`, `while`, call-statement, block, declaration,
+//!   order: `match`, block, `if`, `while`, return, declaration, call,
 //!   assignment.
 //! * [`assignment`] — parses `lvalue = expression ;`; exported separately
 //!   because the test suite uses it directly.
@@ -44,6 +44,7 @@ use crate::ir::ast::{Expr, ExprD, Statement, StatementD, UncheckedExpr, Unchecke
 use crate::parser::expressions::{expression, parse_call};
 use crate::parser::functions::type_name;
 use crate::parser::identifiers::identifier;
+use crate::parser::patterns::match_statement;
 use nom::{
     branch::alt,
     bytes::complete::tag,
@@ -58,11 +59,12 @@ fn wrap(s: Statement<()>) -> UncheckedStmt {
     StatementD { stmt: s, ty: () }
 }
 
-/// Parse any statement: block | if | while | return | decl | call | assignment.
+/// Parse any statement: match | block | if | while | return | decl | call | assignment.
 pub fn statement(input: &str) -> IResult<&str, UncheckedStmt> {
     preceded(
         multispace0,
         alt((
+            match_statement,
             block_statement,
             if_statement,
             while_statement,
@@ -104,7 +106,7 @@ fn decl_statement(input: &str) -> IResult<&str, UncheckedStmt> {
 
 /// Parse a block statement: `{ stmt* }`.
 /// Each statement inside the block carries its own terminator (`;` or `}`).
-fn block_statement(input: &str) -> IResult<&str, UncheckedStmt> {
+pub(crate) fn block_statement(input: &str) -> IResult<&str, UncheckedStmt> {
     map(
         delimited(
             preceded(multispace0, char('{')),

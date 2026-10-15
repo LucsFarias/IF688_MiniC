@@ -41,7 +41,7 @@ use nom::{
     branch::alt,
     bytes::complete::tag,
     character::complete::{char, multispace0},
-    combinator::map,
+    combinator::{map, verify},
     multi::separated_list0,
     sequence::{delimited, pair, preceded, tuple},
     IResult,
@@ -65,10 +65,36 @@ pub fn parse_call(input: &str) -> IResult<&str, (String, Vec<UncheckedExpr>)> {
     Ok((rest, (name.to_string(), args)))
 }
 
-/// Atom: literal, call, array literal, identifier, or parenthesized expression.
+/// Parse an ADT constructor, distinguished from a function call by uppercase
+/// initial letter: `None` or `Some(expression, ...)`.
+fn parse_construct(input: &str) -> IResult<&str, UncheckedExpr> {
+    let (rest, name) = verify(identifier, |name: &&str| {
+        name.chars()
+            .next()
+            .is_some_and(|character| character.is_uppercase())
+    })(input)?;
+    let (rest, args) = nom::combinator::opt(delimited(
+        preceded(multispace0, char('(')),
+        separated_list0(
+            preceded(multispace0, tag(",")),
+            preceded(multispace0, expression),
+        ),
+        preceded(multispace0, char(')')),
+    ))(rest)?;
+    Ok((
+        rest,
+        wrap(Expr::Construct {
+            name: name.to_string(),
+            args: args.unwrap_or_default(),
+        }),
+    ))
+}
+
+/// Atom: literal, constructor, call, array literal, identifier, or parenthesized expression.
 fn atom(input: &str) -> IResult<&str, UncheckedExpr> {
     alt((
         map(literal, |l| wrap(Expr::Literal(l.into()))),
+        parse_construct,
         map(parse_call, |(name, args)| wrap(Expr::Call { name, args })),
         map(
             delimited(

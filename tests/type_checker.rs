@@ -1,15 +1,13 @@
 //! Integration tests for the MiniC type checker.
 
-use nom::combinator::all_consuming;
 use mini_c::ir::ast::{CheckedProgram, Type};
 use mini_c::parser::program;
 use mini_c::semantic::type_check;
+use nom::combinator::all_consuming;
 
 fn parse_and_type_check(src: &str) -> Result<CheckedProgram, mini_c::semantic::TypeError> {
-    let (_, prog) = all_consuming(program)(src).map_err(|_| {
-        mini_c::semantic::TypeError {
-            message: "parse failed".to_string(),
-        }
+    let (_, prog) = all_consuming(program)(src).map_err(|_| mini_c::semantic::TypeError {
+        message: "parse failed".to_string(),
     })?;
     type_check(&prog)
 }
@@ -136,7 +134,10 @@ fn test_type_check_return_void_ok() {
 fn test_type_check_return_value_in_void_fn() {
     let result = parse_and_type_check("void main() return 1;");
     assert!(result.is_err());
-    assert!(result.unwrap_err().message.contains("void function must not return a value"));
+    assert!(result
+        .unwrap_err()
+        .message
+        .contains("void function must not return a value"));
 }
 
 #[test]
@@ -201,4 +202,96 @@ fn test_type_check_sqrt_wrong_arity() {
 fn test_type_check_print_wrong_arity() {
     let result = parse_and_type_check("void main() { print(1, 2); }");
     assert!(result.is_err(), "expected arity error for print(1, 2)");
+}
+
+#[test]
+fn test_type_check_exhaustive_match_with_payload_binding() {
+    let source = r#"
+        type OptionInt = Some(int) | None;
+        void main() {
+            OptionInt value = Some(42);
+            int result = 0;
+            match (value) {
+                Some(number) => { result = number; }
+                None => { result = 0; }
+            }
+        }
+    "#;
+    assert!(parse_and_type_check(source).is_ok());
+}
+
+#[test]
+fn test_type_check_rejects_non_exhaustive_match() {
+    let source = r#"
+        type OptionInt = Some(int) | None;
+        void main() {
+            OptionInt value = Some(42);
+            match (value) { Some(number) => { print(number); } }
+        }
+    "#;
+    let error = parse_and_type_check(source).unwrap_err();
+    assert!(error.message.contains("non-exhaustive match"));
+}
+
+#[test]
+fn test_type_check_checks_nested_match_exhaustiveness() {
+    let source = r#"
+        type Inner = Left | Right;
+        type Outer = Wrapped(Inner) | Empty;
+        void main() {
+            Outer value = Wrapped(Left);
+            match (value) {
+                Wrapped(Left) => {}
+                Empty => {}
+            }
+        }
+    "#;
+    let error = parse_and_type_check(source).unwrap_err();
+    assert!(error.message.contains("non-exhaustive match"));
+}
+
+#[test]
+fn test_type_check_match_rejects_variant_from_another_adt() {
+    let source = r#"
+        type First = A | B;
+        type Second = C | D;
+        void main() {
+            First value = A;
+            match (value) { A => {} C => {} }
+        }
+    "#;
+    let error = parse_and_type_check(source).unwrap_err();
+    assert!(error.message.contains("does not belong to ADT"));
+}
+
+#[test]
+fn test_type_check_match_binding_does_not_escape_arm() {
+    let source = r#"
+        type OptionInt = Some(int) | None;
+        void main() {
+            OptionInt value = Some(42);
+            match (value) {
+                Some(number) => { print(number); }
+                None => {}
+            }
+            print(number);
+        }
+    "#;
+    let error = parse_and_type_check(source).unwrap_err();
+    assert!(error.message.contains("undeclared variable"));
+}
+
+#[test]
+fn test_type_check_constructor_validates_variant_and_payload() {
+    let unknown = parse_and_type_check(
+        "type OptionInt = Some(int) | None; void main() { OptionInt x = Missing; }",
+    )
+    .unwrap_err();
+    assert!(unknown.message.contains("unknown ADT variant"));
+
+    let wrong_payload = parse_and_type_check(
+        "type OptionInt = Some(int) | None; void main() { OptionInt x = Some(true); }",
+    )
+    .unwrap_err();
+    assert!(wrong_payload.message.contains("field type mismatch"));
 }
