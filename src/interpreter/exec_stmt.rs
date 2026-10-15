@@ -34,7 +34,7 @@
 //! This gives MiniC correct lexical block scoping without a scope stack.
 
 use crate::environment::Environment;
-use crate::ir::ast::{CheckedExpr, CheckedStmt, Expr, Statement};
+use crate::ir::ast::{CheckedExpr, CheckedStmt, Expr, Pattern, Statement};
 
 use super::eval_expr::{eval_call, eval_expr};
 use super::value::{RuntimeError, Value};
@@ -112,6 +112,28 @@ pub fn exec_stmt(stmt: &CheckedStmt, env: &mut Environment<Value>) -> ExecResult
             }
         },
 
+        // --- ADT match ---
+        Statement::Match { scrutinee, arms } => {
+            let value = eval_expr(scrutinee, env)?;
+            for arm in arms {
+                let mut bindings = Vec::new();
+                if !match_pattern(&arm.pattern, &value, &mut bindings) {
+                    continue;
+                }
+
+                let outer_names = env.names();
+                for (name, bound_value) in bindings {
+                    env.declare(name, bound_value);
+                }
+                let result = exec_stmt(&arm.body, env);
+                env.remove_new(&outer_names);
+                return result;
+            }
+            Err(RuntimeError::new(
+                "no match arm accepted the ADT value; type checker invariant violated",
+            ))
+        }
+
         // --- Return ---
         Statement::Return(Some(expr)) => {
             let val = eval_expr(expr, env)?;
@@ -125,6 +147,31 @@ pub fn exec_stmt(stmt: &CheckedStmt, env: &mut Environment<Value>) -> ExecResult
                 args.iter().map(|a| eval_expr(a, env)).collect();
             eval_call(name, arg_vals?, env)?;
             Ok(None)
+        }
+    }
+}
+
+fn match_pattern(pattern: &Pattern, value: &Value, bindings: &mut Vec<(String, Value)>) -> bool {
+    match pattern {
+        Pattern::Wildcard => true,
+        Pattern::Bind(name) => {
+            bindings.push((name.clone(), value.clone()));
+            true
+        }
+        Pattern::Variant { name, fields } => {
+            match value {
+                Value::Adt {
+                    variant,
+                    fields: values,
+                    ..
+                } if variant == name && values.len() == fields.len() => fields
+                    .iter()
+                    .zip(values)
+                    .all(|(field_pattern, field_value)| {
+                        match_pattern(field_pattern, field_value, bindings)
+                    }),
+                _ => false,
+            }
         }
     }
 }

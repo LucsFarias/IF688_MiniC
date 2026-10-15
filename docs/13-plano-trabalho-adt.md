@@ -1,5 +1,13 @@
 # Plano de trabalho — entrega 1 (AST e parser para ADTs e pattern matching)
 
+> **Atualização:** este plano registra a divisão original do trabalho e a
+> proposta inicial de `match` como expressão. Essa decisão foi substituída:
+> atualmente `match` é um statement cujos braços contêm blocos, a cobertura é
+> verificada recursivamente pelo type checker, e o interpretador executa os
+> braços. A sintaxe vigente está em [12-sintaxe-adt.md](12-sintaxe-adt.md).
+> A geração TAC de ADTs/`match` permanece fora do escopo porque o backend é
+> parcial.
+
 Divide o trabalho entre 4 pessoas. Pressupõe que `docs/12-sintaxe-adt.md` já
 foi lido e aceito por todos — qualquer dúvida sobre "como se escreve" se
 resolve lá, não neste documento. Este documento só trata de "quem implementa

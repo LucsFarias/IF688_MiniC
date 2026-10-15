@@ -26,6 +26,7 @@
 //! Value::Bool(true)       — a boolean
 //! Value::Str("hi")        — a string
 //! Value::Array([...])     — a list of Values
+//! Value::Adt { ... }      — a constructed ADT variant and its fields
 //! Value::Void             — no value (returned by void functions)
 //! Value::Fn(FnValue::...) — a callable function
 //! ```
@@ -101,6 +102,11 @@ pub enum Value {
     Bool(bool),
     Str(String),
     Array(Vec<Value>),
+    Adt {
+        type_name: String,
+        variant: String,
+        fields: Vec<Value>,
+    },
     Void,
     Fn(FnValue),
 }
@@ -122,6 +128,24 @@ impl fmt::Display for Value {
                     write!(f, "{}", v)?;
                 }
                 write!(f, "]")
+            }
+            Value::Adt {
+                type_name,
+                variant,
+                fields,
+            } => {
+                write!(f, "{}::{}", type_name, variant)?;
+                if !fields.is_empty() {
+                    write!(f, "(")?;
+                    for (index, field) in fields.iter().enumerate() {
+                        if index > 0 {
+                            write!(f, ", ")?;
+                        }
+                        write!(f, "{}", field)?;
+                    }
+                    write!(f, ")")?;
+                }
+                Ok(())
             }
             Value::Fn(_) => write!(f, "<function>"),
         }

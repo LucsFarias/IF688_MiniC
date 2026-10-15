@@ -34,16 +34,24 @@ use nom::{
     IResult,
 };
 
-/// Parse a type name: int | float | bool | str | void | T[] | T[][] (C-style lowercase).
+/// Parse a type name: primitive, named ADT, or array type.
 pub fn type_name(input: &str) -> IResult<&str, Type> {
     preceded(
         multispace0,
         alt((
             // 2D arrays must be tried before 1D (longer prefix first)
-            map(tag("int[][]"), |_| Type::Array(Box::new(Type::Array(Box::new(Type::Int))))),
-            map(tag("float[][]"), |_| Type::Array(Box::new(Type::Array(Box::new(Type::Float))))),
-            map(tag("bool[][]"), |_| Type::Array(Box::new(Type::Array(Box::new(Type::Bool))))),
-            map(tag("str[][]"), |_| Type::Array(Box::new(Type::Array(Box::new(Type::Str))))),
+            map(tag("int[][]"), |_| {
+                Type::Array(Box::new(Type::Array(Box::new(Type::Int))))
+            }),
+            map(tag("float[][]"), |_| {
+                Type::Array(Box::new(Type::Array(Box::new(Type::Float))))
+            }),
+            map(tag("bool[][]"), |_| {
+                Type::Array(Box::new(Type::Array(Box::new(Type::Bool))))
+            }),
+            map(tag("str[][]"), |_| {
+                Type::Array(Box::new(Type::Array(Box::new(Type::Str))))
+            }),
             map(tag("int[]"), |_| Type::Array(Box::new(Type::Int))),
             map(tag("float[]"), |_| Type::Array(Box::new(Type::Float))),
             map(tag("bool[]"), |_| Type::Array(Box::new(Type::Bool))),
@@ -53,6 +61,7 @@ pub fn type_name(input: &str) -> IResult<&str, Type> {
             map(tag("bool"), |_| Type::Bool),
             map(tag("str"), |_| Type::Str),
             map(tag("void"), |_| Type::Unit),
+            map(identifier, |name: &str| Type::Named(name.to_string())),
         )),
     )(input)
 }

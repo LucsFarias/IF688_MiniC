@@ -108,11 +108,11 @@ pub enum Pattern {
     Variant { name: String, fields: Vec<Pattern> },
 }
 
-/// One arm of a `match` expression: `pattern => body;`
+/// One arm of a `match` statement: `pattern => { statements }`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct MatchArm<Ty> {
     pub pattern: Pattern,
-    pub body: Box<ExprD<Ty>>,
+    pub body: Box<StatementD<Ty>>,
 }
 
 /// An expression: literals, identifiers, and composed operations.
@@ -152,11 +152,6 @@ pub enum Expr<Ty> {
         name: String,
         args: Vec<ExprD<Ty>>,
     },
-    /// `match (scrutinee) { pattern => body; ... }`
-    Match {
-        scrutinee: Box<ExprD<Ty>>,
-        arms: Vec<MatchArm<Ty>>,
-    },
 }
 
 /// Statement with type decoration.
@@ -195,6 +190,11 @@ pub enum Statement<Ty> {
     While {
         cond: Box<ExprD<Ty>>,
         body: Box<StatementD<Ty>>,
+    },
+    /// `match (scrutinee) { pattern => { statements } ... }`
+    Match {
+        scrutinee: Box<ExprD<Ty>>,
+        arms: Vec<MatchArm<Ty>>,
     },
     /// Return statement: `return [expr]`.
     Return(Option<Box<ExprD<Ty>>>),

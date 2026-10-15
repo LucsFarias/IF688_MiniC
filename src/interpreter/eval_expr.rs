@@ -64,15 +64,55 @@ pub fn eval_expr(expr: &CheckedExpr, env: &mut Environment<Value>) -> Result<Val
             ))),
         },
 
-        Expr::Add(l, r) => numeric_binop(eval_expr(l, env)?, eval_expr(r, env)?, |a, b| a + b, |a, b| a + b),
-        Expr::Sub(l, r) => numeric_binop(eval_expr(l, env)?, eval_expr(r, env)?, |a, b| a - b, |a, b| a - b),
-        Expr::Mul(l, r) => numeric_binop(eval_expr(l, env)?, eval_expr(r, env)?, |a, b| a * b, |a, b| a * b),
-        Expr::Div(l, r) => numeric_binop(eval_expr(l, env)?, eval_expr(r, env)?, |a, b| a / b, |a, b| a / b),
+        Expr::Add(l, r) => numeric_binop(
+            eval_expr(l, env)?,
+            eval_expr(r, env)?,
+            |a, b| a + b,
+            |a, b| a + b,
+        ),
+        Expr::Sub(l, r) => numeric_binop(
+            eval_expr(l, env)?,
+            eval_expr(r, env)?,
+            |a, b| a - b,
+            |a, b| a - b,
+        ),
+        Expr::Mul(l, r) => numeric_binop(
+            eval_expr(l, env)?,
+            eval_expr(r, env)?,
+            |a, b| a * b,
+            |a, b| a * b,
+        ),
+        Expr::Div(l, r) => numeric_binop(
+            eval_expr(l, env)?,
+            eval_expr(r, env)?,
+            |a, b| a / b,
+            |a, b| a / b,
+        ),
 
-        Expr::Lt(l, r) => numeric_cmp(eval_expr(l, env)?, eval_expr(r, env)?, |a, b| a < b, |a, b| a < b),
-        Expr::Le(l, r) => numeric_cmp(eval_expr(l, env)?, eval_expr(r, env)?, |a, b| a <= b, |a, b| a <= b),
-        Expr::Gt(l, r) => numeric_cmp(eval_expr(l, env)?, eval_expr(r, env)?, |a, b| a > b, |a, b| a > b),
-        Expr::Ge(l, r) => numeric_cmp(eval_expr(l, env)?, eval_expr(r, env)?, |a, b| a >= b, |a, b| a >= b),
+        Expr::Lt(l, r) => numeric_cmp(
+            eval_expr(l, env)?,
+            eval_expr(r, env)?,
+            |a, b| a < b,
+            |a, b| a < b,
+        ),
+        Expr::Le(l, r) => numeric_cmp(
+            eval_expr(l, env)?,
+            eval_expr(r, env)?,
+            |a, b| a <= b,
+            |a, b| a <= b,
+        ),
+        Expr::Gt(l, r) => numeric_cmp(
+            eval_expr(l, env)?,
+            eval_expr(r, env)?,
+            |a, b| a > b,
+            |a, b| a > b,
+        ),
+        Expr::Ge(l, r) => numeric_cmp(
+            eval_expr(l, env)?,
+            eval_expr(r, env)?,
+            |a, b| a >= b,
+            |a, b| a >= b,
+        ),
 
         Expr::Eq(l, r) => {
             let lv = eval_expr(l, env)?;
@@ -148,8 +188,23 @@ pub fn eval_expr(expr: &CheckedExpr, env: &mut Environment<Value>) -> Result<Val
             eval_call(name, arg_vals?, env)
         }
 
-        Expr::Construct { .. } => Err(RuntimeError::new("adt/match not yet supported")),
-        Expr::Match { .. } => Err(RuntimeError::new("adt/match not yet supported")),
+        Expr::Construct { name, args } => {
+            let crate::ir::ast::Type::Named(type_name) = &expr.ty else {
+                return Err(RuntimeError::new(format!(
+                    "constructor '{}' has no checked ADT type",
+                    name
+                )));
+            };
+            let fields = args
+                .iter()
+                .map(|arg| eval_expr(arg, env))
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(Value::Adt {
+                type_name: type_name.clone(),
+                variant: name.clone(),
+                fields,
+            })
+        }
     }
 }
 
@@ -238,6 +293,26 @@ fn values_equal(a: &Value, b: &Value) -> bool {
         (Value::Float(x), Value::Int(y)) => *x == (*y as f64),
         (Value::Bool(x), Value::Bool(y)) => x == y,
         (Value::Str(x), Value::Str(y)) => x == y,
+        (
+            Value::Adt {
+                type_name: type_a,
+                variant: variant_a,
+                fields: fields_a,
+            },
+            Value::Adt {
+                type_name: type_b,
+                variant: variant_b,
+                fields: fields_b,
+            },
+        ) => {
+            type_a == type_b
+                && variant_a == variant_b
+                && fields_a.len() == fields_b.len()
+                && fields_a
+                    .iter()
+                    .zip(fields_b)
+                    .all(|(field_a, field_b)| values_equal(field_a, field_b))
+        }
         _ => false,
     }
 }
