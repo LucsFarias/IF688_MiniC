@@ -41,7 +41,7 @@ use nom::{
     branch::alt,
     bytes::complete::tag,
     character::complete::{char, multispace0},
-    combinator::{map, verify},
+    combinator::{map, opt, verify},
     multi::separated_list0,
     sequence::{delimited, pair, preceded, tuple},
     IResult,
@@ -94,7 +94,8 @@ fn parse_construct(input: &str) -> IResult<&str, UncheckedExpr> {
 fn atom(input: &str) -> IResult<&str, UncheckedExpr> {
     alt((
         map(literal, |l| wrap(Expr::Literal(l.into()))),
-        parse_construct,
+        // Incluindo constructs, que são expressões que criam instâncias de tipos definidos pelo usuário, como `Point(1, 2)`. Devem ser adicionados antes de `parse_call` para garantir que sejam reconhecidos corretamente.
+        construct,
         map(parse_call, |(name, args)| wrap(Expr::Call { name, args })),
         map(
             delimited(
@@ -269,4 +270,23 @@ fn logical_or(input: &str) -> IResult<&str, UncheckedExpr> {
 /// Top-level expression parser. Returns UncheckedExpr with ty: () at each node.
 pub fn expression(input: &str) -> IResult<&str, UncheckedExpr> {
     preceded(multispace0, logical_or)(input)
+}
+
+fn upper_ident(input: &str) -> IResult<&str, &str> {
+    verify(identifier, |s: &str| {
+        s.chars().next().is_some_and(|c| c.is_uppercase())
+    })(input)
+}
+
+fn construct(input: &str) -> IResult<&str, UncheckedExpr> {
+    let (rest, name) = preceded(multispace0, upper_ident)(input)?;
+    let (rest, args) = opt(delimited(
+        preceded(multispace0, char('(')),
+        separated_list0(preceded(multispace0, char(',')), expression),
+        preceded(multispace0, char(')')),
+    ))(rest)?;
+    Ok((rest, wrap(Expr::Construct {
+        name: name.to_string(),
+        args: args.unwrap_or_default(),
+    })))
 }
