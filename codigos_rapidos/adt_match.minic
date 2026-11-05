@@ -1,0 +1,46 @@
+type Color = Red | Green | Blue;
+type Shape = Circle(int) | Rectangle(int, int);
+type OptionInt = Some(int) | None;
+type List = Cons(int, List) | Nil;
+
+void print_color(Color c) {
+  match (c) {
+    Red   => { print("vermelho"); }
+    Green => { print("verde"); }
+    Blue  => { print("azul"); }
+  }
+}
+
+int area(Shape s) {
+  match (s) {
+    Circle(r) => { return 3 * r * r; }
+    Rectangle(w, h) => { return w * h; }
+  }
+  return 0;
+}
+
+int get_or_default(OptionInt o, int d) {
+  match (o) {
+    Some(v) => { return v; }
+    _ => { return d; }
+  }
+  return d;
+}
+
+int sum(List l) {
+  match (l) {
+    Cons(head, tail) => { return head + sum(tail); }
+    Nil => { return 0; }
+  }
+  return 0;
+}
+
+void main() {
+  print_color(Green);
+  print(area(Circle(2)));
+  print(area(Rectangle(3, 5)));
+  print(get_or_default(Some(42), 0));
+  print(get_or_default(None, -1));
+  List numbers = Cons(1, Cons(2, Cons(3, Nil)));
+  print(sum(numbers));
+}
